@@ -34,7 +34,7 @@ func GetPathObj(f string) PathObject {
 	base := filepath.Base(absolutePath)
 	ext := filepath.Ext(absolutePath)
 	if ext != "" {
-		name = strings.Replace(base, ext, "", 0)
+		name = strings.Replace(base, ext, "", -1)
 	} else {
 		name = base
 	}
@@ -50,4 +50,8 @@ func GetPathObj(f string) PathObject {
 
 func (p PathObject) UpdateExt(ext string) PathObject {
 	return GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, p.Name, ext))
+}
+
+func (p PathObject) UpdateDir(dir string) PathObject {
+	return GetPathObj(fmt.Sprintf("%s%c%s%s", dir, os.PathSeparator, p.Name, p.Ext))
 }

@@ -43,6 +43,10 @@ var mvCmd = &cobra.Command{
 		inputFiles := args[0 : len(args)-1]
 		// parse options into our own struct
 		opts := options.GetMoveOptions(cmd)
+		// if rename alias used, set --no-move automatically
+		if cmd.CalledAs() == "rename" {
+			opts.NoMove = true
+		}
 		// create a list of operations for all input files
 		operations := operation.FilesToOperationsList("move", inputFiles, outputTemplate)
 		// filter out directories if --ignore-directories option passed
@@ -57,6 +61,9 @@ var mvCmd = &cobra.Command{
 		operations = operations.RenderTemplates()
 		if !opts.NoExt {
 			operations = operations.PopulateBlankExtensions()
+		}
+		if opts.NoMove {
+			operations = operations.NoMove()
 		}
 		for _, o := range operations {
 			fmt.Printf("%s -> %s\n", o.Input.Rel, o.Output.Rel)

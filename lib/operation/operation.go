@@ -131,3 +131,12 @@ func (o OperationList) PopulateBlankExtensions() OperationList {
 	}
 	return ret
 }
+
+func (o OperationList) NoMove() OperationList {
+	ret := OperationList{}
+	for _, op := range o {
+		op.Output = op.Output.UpdateDir(op.Input.Dir)
+		ret = append(ret, op)
+	}
+	return ret
+}
