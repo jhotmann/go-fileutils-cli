@@ -114,8 +114,19 @@ func (o OperationList) RenderTemplates() OperationList {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(out)
+		fmt.Println("Rendered:", out)
 		op.Output = util.GetPathObj(out)
+		ret = append(ret, op)
+	}
+	return ret
+}
+
+func (o OperationList) PopulateBlankExtensions() OperationList {
+	ret := OperationList{}
+	for _, op := range o {
+		if op.Output.Ext == "" && op.Input.Ext != "" {
+			op.Output = op.Output.UpdateExt(op.Input.Ext)
+		}
 		ret = append(ret, op)
 	}
 	return ret

@@ -55,6 +55,9 @@ var mvCmd = &cobra.Command{
 		operations.Sort(opts.Sort)
 		// convert output from template to string to PathObj
 		operations = operations.RenderTemplates()
+		if !opts.NoExt {
+			operations = operations.PopulateBlankExtensions()
+		}
 		for _, o := range operations {
 			fmt.Printf("%s -> %s\n", o.Input.Rel, o.Output.Rel)
 		}

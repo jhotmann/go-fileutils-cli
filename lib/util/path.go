@@ -47,3 +47,7 @@ func GetPathObj(f string) PathObject {
 		Ext:  ext,
 	}
 }
+
+func (p PathObject) UpdateExt(ext string) PathObject {
+	return GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, p.Name, ext))
+}
