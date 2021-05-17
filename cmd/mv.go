@@ -53,20 +53,22 @@ var mvCmd = &cobra.Command{
 		if opts.IgnoreDirectories {
 			operations = operations.RemoveDirectories()
 		}
-		// filter out repeat inputs (only applies to moves)
-		operations = operations.RemoveDuplicateInputs()
-		// sort operations if --sort option passed
-		operations.Sort(opts.Sort)
-		// convert output from template to string to PathObj
-		operations = operations.RenderTemplates()
+		// filter out repeat inputs (only applies to moves), sort, and convert output from template to string to PathObj
+		operations = operations.RemoveDuplicateInputs().Sort(opts.Sort).RenderTemplates()
 		if !opts.NoExt {
 			operations = operations.PopulateBlankExtensions()
 		}
 		if opts.NoMove {
 			operations = operations.NoMove()
 		}
+		if !opts.Force {
+			operations = operations.FindConflicts()
+		}
+		if !opts.NoIndex {
+			operations = operations.AddIndex()
+		}
 		for _, o := range operations {
-			fmt.Printf("%s -> %s\n", o.Input.Rel, o.Output.Rel)
+			fmt.Printf("%s -> %s (Conflict: %t)\n", o.Input.Rel, o.Output.Rel, o.HasConflict)
 		}
 	},
 }

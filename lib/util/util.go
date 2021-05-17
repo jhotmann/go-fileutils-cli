@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dlclark/regexp2"
@@ -44,4 +45,9 @@ func ToSnakeCase(str string) string {
 	snake, _ := matchFirstCap.Replace(str, "${1}_${2}", -1, -1)
 	snake, _ = matchAllCap.Replace(snake, "${1}_${2}", -1, -1)
 	return strings.ToLower(snake)
+}
+
+func ZeroPad(num int, total int) string {
+	desiredLength := len(fmt.Sprintf("%d", total))
+	return fmt.Sprintf("%0*d", desiredLength, num)
 }

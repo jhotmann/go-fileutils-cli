@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v4"
@@ -18,6 +19,9 @@ type Operation struct {
 	Stats          os.FileInfo
 	OutputTemplate *pongo2.Template
 	Output         util.PathObject
+	HasConflict    bool
+	Index          int
+	ConflictCount  int
 }
 
 type OperationList []Operation
@@ -114,7 +118,7 @@ func (o OperationList) RenderTemplates() OperationList {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Rendered:", out)
+		//fmt.Println("Rendered:", out)
 		op.Output = util.GetPathObj(out)
 		ret = append(ret, op)
 	}
@@ -136,6 +140,49 @@ func (o OperationList) NoMove() OperationList {
 	ret := OperationList{}
 	for _, op := range o {
 		op.Output = op.Output.UpdateDir(op.Input.Dir)
+		ret = append(ret, op)
+	}
+	return ret
+}
+
+func (o OperationList) FindConflicts() OperationList {
+	ret := OperationList{}
+	counts := map[string]int{}
+	indicies := map[string]int{}
+	for _, op := range o {
+		value := counts[op.Output.Abs] // If key doesn't exist, value will be zero
+		counts[op.Output.Abs] = value + 1
+	}
+	for _, op := range o {
+		count := counts[op.Output.Abs]
+		op.ConflictCount = count
+		if count == 1 {
+			op.Index = 1
+			op.HasConflict = false
+		} else {
+			op.HasConflict = true
+			index := indicies[op.Output.Abs] + 1
+			indicies[op.Output.Abs] = index
+			op.Index = index
+		}
+		ret = append(ret, op)
+	}
+	return ret
+}
+
+func (o OperationList) AddIndex() OperationList {
+	ret := OperationList{}
+	for _, op := range o {
+		if op.HasConflict {
+			index := util.ZeroPad(op.Index, op.ConflictCount)
+			if strings.Contains(op.Output.Name, "--FILEINDEXHERE--") {
+				op.Output = op.Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", index, -1))
+			} else {
+				op.Output = op.Output.UpdateName(op.Output.Name + index)
+			}
+		} else {
+			op.Output = op.Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", "", -1))
+		}
 		ret = append(ret, op)
 	}
 	return ret
