@@ -2,7 +2,6 @@ package filters
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +64,7 @@ func DateFilter(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 			OrigError: errors.New("filter input argument must be of type 'time.Time'"),
 		}
 	}
-	fmt.Println(unicodeToGoDateFormat(param.String()))
+	//fmt.Println(unicodeToGoDateFormat(param.String()))
 	return pongo2.AsValue(t.Format(unicodeToGoDateFormat(param.String()))), nil
 }
 

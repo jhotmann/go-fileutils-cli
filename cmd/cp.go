@@ -1,51 +1,60 @@
-/*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package cmd
 
 import (
-	"fmt"
+	"github.com/flosch/pongo2/v4"
+	"github.com/jhotmann/go-fileutils-cli/lib/operation"
+	"github.com/jhotmann/go-fileutils-cli/lib/options"
 
 	"github.com/spf13/cobra"
 )
 
-// cpCmd represents the cp command
 var cpCmd = &cobra.Command{
-	Use:   "cp",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Use:     "cp {file(s) to copy} {output template}",
+	Short:   "Copy files",
+	Long:    `Copy files with the power of templates`,
+	Args:    cobra.MinimumNArgs(2),
+	Aliases: []string{"copy"},
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("cp called")
+		// output is the last non-flag argument
+		outputTemplate, err := pongo2.FromString(args[len(args)-1])
+		if err != nil {
+			panic(err)
+		}
+		// all other non-flag arguments are input files
+		inputFiles := args[0 : len(args)-1]
+		// parse options into our own struct
+		opts := options.GetCommonOptions(cmd)
+		// create a list of operations for all input files
+		operations := operation.FilesToOperationsList("copy", inputFiles, outputTemplate)
+		// filter out directories if --ignore-directories option passed
+		if opts.IgnoreDirectories {
+			operations = operations.RemoveDirectories()
+		}
+		// filter out repeat inputs (only applies to moves), sort, and convert output from template to string to PathObj
+		operations = operations.RemoveDuplicateInputs().Sort(opts.Sort).RenderTemplates()
+		if !opts.NoExt {
+			operations = operations.PopulateBlankExtensions()
+		}
+		if !opts.Force { // don't care about conflicts
+			operations = operations.FindConflicts()
+		}
+		if !opts.NoIndex { // auto-index conflicting outputs
+			operations = operations.AddIndex()
+		}
+		operations.Run(opts)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(cpCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// cpCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// cpCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	cpCmd.Flags().BoolP("force", "f", options.Force, "Overwrite conflicts without prompt")
+	cpCmd.Flags().BoolP("simulate", "s", options.Simulate, "Simulate command and print outputs")
+	cpCmd.Flags().String("sort", options.Sort, "Sort files before running operations")
+	cpCmd.Flags().BoolP("verbose", "v", options.Verbose, "Verbose logging")
+	cpCmd.Flags().BoolP("ignore-directories", "d", options.IgnoreDirectories, "Do not move/rename directories")
+	cpCmd.Flags().Bool("no-index", options.NoIndex, "Do not automatically append an index when multiple operations result in the same file name")
+	cpCmd.Flags().Bool("no-move", options.NoMove, "Do not move files to a different directory")
+	cpCmd.Flags().Bool("no-ext", options.NoExt, "Do not automatically append the original file extension if one isn't supplied")
+	cpCmd.Flags().Bool("no-mkdir", options.NoMkdir, "Do not create any missing directories")
 }
