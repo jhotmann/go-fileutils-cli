@@ -14,6 +14,7 @@ import (
 	_ "github.com/jhotmann/go-fileutils-cli/lib/filters"
 	"github.com/jhotmann/go-fileutils-cli/lib/options"
 	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/manifoldco/promptui"
 )
 
 type Operation struct {
@@ -195,13 +196,19 @@ func (o OperationList) AddIndex() OperationList {
 func (o OperationList) Run(opts options.CommonOptions) {
 	for _, op := range o {
 		var err error
-		if !opts.NoMkdir {
+		if op.Input.Abs == op.Output.Abs { // no change
+			if opts.Verbose {
+				fmt.Println("Skipping " + op.Input.Rel + " because it did not change")
+			}
+			continue
+		}
+		if !opts.NoMkdir { // Make sure all output directories exist
 			_, err := os.Stat(op.Output.Dir)
-			if os.IsNotExist(err) { // Output directory doesn't exist so we'll make it
-				os.MkdirAll(op.Output.Dir, op.Stats.Mode())
+			if os.IsNotExist(err) { // Output directory doesn't exist so we'll create it with the same permissions as the input file
+				stats, _ := os.Stat(op.Input.Dir)
+				os.MkdirAll(op.Output.Dir, stats.Mode())
 			}
 		}
-		err = os.MkdirAll(op.Output.Dir, op.Stats.Mode())
 		if opts.Force { // Do the operation with reckless abadon
 			err = op.runOperation()
 		} else {
@@ -209,7 +216,34 @@ func (o OperationList) Run(opts options.CommonOptions) {
 			if os.IsNotExist(err) { // File/Dir doesn't exist so we can proceed
 				err = op.runOperation()
 			} else { // File/Dir already exists, check with user what to do
-				// TODO
+				if strings.ToLower(op.Input.Abs) == strings.ToLower(op.Output.Abs) && op.Type == "move" { // rename with case change, allow it
+					op.runOperation()
+				} else { // Prompt for user input
+					fmt.Println()
+					fmt.Println("What should happen to " + op.Input.Rel + ", " + op.Output.Rel + " already exists")
+					prompt := promptui.Select{
+						Label: "What would you like to do?",
+						Items: []string{"Overwrite", "Input a new name", "Skip"},
+					}
+					index, _, _ := prompt.Run()
+					switch index {
+					case 0:
+						op.runOperation()
+					case 1:
+						prompt2 := promptui.Prompt{
+							Label:   "New File Name",
+							Default: op.Output.Name,
+						}
+						val, err := prompt2.Run()
+						if err != nil {
+							panic(err)
+						}
+						op.Output = op.Output.UpdateName(val)
+						op.runOperation()
+					case 2:
+						continue
+					}
+				}
 			}
 		}
 		if err != nil {
