@@ -16,8 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/flosch/pongo2/v4"
 	"github.com/jhotmann/go-fileutils-cli/lib/operation"
 	"github.com/jhotmann/go-fileutils-cli/lib/options"
@@ -58,18 +56,16 @@ var mvCmd = &cobra.Command{
 		if !opts.NoExt {
 			operations = operations.PopulateBlankExtensions()
 		}
-		if opts.NoMove {
+		if opts.NoMove { // keep output directory same as input
 			operations = operations.NoMove()
 		}
-		if !opts.Force {
+		if !opts.Force { // don't care about conflicts
 			operations = operations.FindConflicts()
 		}
-		if !opts.NoIndex {
+		if !opts.NoIndex { // auto-index conflicting outputs
 			operations = operations.AddIndex()
 		}
-		for _, o := range operations {
-			fmt.Printf("%s -> %s (Conflict: %t)\n", o.Input.Rel, o.Output.Rel, o.HasConflict)
-		}
+		operations.Run(opts.CommonOptions)
 	},
 }
 

@@ -1,6 +1,7 @@
 package operation
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/1set/gut/yos"
 	"github.com/flosch/pongo2/v4"
 	_ "github.com/jhotmann/go-fileutils-cli/lib/filters"
+	"github.com/jhotmann/go-fileutils-cli/lib/options"
 	"github.com/jhotmann/go-fileutils-cli/lib/util"
 )
 
@@ -35,6 +38,7 @@ func FilesToOperationsList(opType string, files []string, outputTemplate *pongo2
 		}
 		for _, match := range matches {
 			var op Operation
+			op.Type = opType
 			op.Input = util.GetPathObj(match)
 			op.OutputTemplate = outputTemplate
 			stats, err := os.Stat(match)
@@ -186,4 +190,54 @@ func (o OperationList) AddIndex() OperationList {
 		ret = append(ret, op)
 	}
 	return ret
+}
+
+func (o OperationList) Run(opts options.CommonOptions) {
+	for _, op := range o {
+		var err error
+		if !opts.NoMkdir {
+			_, err := os.Stat(op.Output.Dir)
+			if os.IsNotExist(err) { // Output directory doesn't exist so we'll make it
+				os.MkdirAll(op.Output.Dir, op.Stats.Mode())
+			}
+		}
+		err = os.MkdirAll(op.Output.Dir, op.Stats.Mode())
+		if opts.Force { // Do the operation with reckless abadon
+			err = op.runOperation()
+		} else {
+			_, err := os.Stat(op.Output.Abs)
+			if os.IsNotExist(err) { // File/Dir doesn't exist so we can proceed
+				err = op.runOperation()
+			} else { // File/Dir already exists, check with user what to do
+				// TODO
+			}
+		}
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if opts.Simulate || opts.Verbose {
+			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
+		}
+	}
+}
+
+func (o Operation) runOperation() error {
+	var err error
+	switch o.Type {
+	case "move":
+		err = os.Rename(o.Input.Abs, o.Output.Abs)
+	case "copy":
+		if o.Stats.IsDir() {
+			yos.CopyDir(o.Input.Abs, o.Output.Abs)
+		} else {
+			yos.CopyFile(o.Input.Abs, o.Output.Abs)
+		}
+	case "link-soft":
+		err = os.Symlink(o.Input.Abs, o.Output.Abs)
+	case "link-hard":
+		err = os.Link(o.Input.Abs, o.Output.Abs)
+	default:
+		err = errors.New(o.Type + " not implemented")
+	}
+	return err
 }
