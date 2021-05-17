@@ -123,7 +123,7 @@ func (o OperationList) RenderTemplates() OperationList {
 		if err != nil {
 			panic(err)
 		}
-		//fmt.Println("Rendered:", out)
+		out = strings.ReplaceAll(out, "--REPLACEME--", "")
 		op.Output = util.GetPathObj(out)
 		ret = append(ret, op)
 	}
@@ -196,6 +196,10 @@ func (o OperationList) AddIndex() OperationList {
 func (o OperationList) Run(opts options.CommonOptions) {
 	for _, op := range o {
 		var err error
+		if opts.Simulate {
+			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
+			continue
+		}
 		if op.Input.Abs == op.Output.Abs { // no change
 			if opts.Verbose {
 				fmt.Println("Skipping " + op.Input.Rel + " because it did not change")
@@ -249,7 +253,7 @@ func (o OperationList) Run(opts options.CommonOptions) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		if opts.Simulate || opts.Verbose {
+		if opts.Verbose {
 			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
 		}
 	}

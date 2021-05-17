@@ -2,9 +2,7 @@ package util
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/dlclark/regexp2"
 	"github.com/spf13/cobra"
 )
 
@@ -39,15 +37,12 @@ func IndexOf(word string, data []string) int {
 	return -1
 }
 
-func ToSnakeCase(str string) string {
-	var matchFirstCap = regexp2.MustCompile("(.)([A-Z][a-z]+)", 0)
-	var matchAllCap = regexp2.MustCompile("([a-z0-9])([A-Z])", 0)
-	snake, _ := matchFirstCap.Replace(str, "${1}_${2}", -1, -1)
-	snake, _ = matchAllCap.Replace(snake, "${1}_${2}", -1, -1)
-	return strings.ToLower(snake)
-}
-
 func ZeroPad(num int, total int) string {
 	desiredLength := len(fmt.Sprintf("%d", total))
 	return fmt.Sprintf("%0*d", desiredLength, num)
+}
+
+func ZeroPadString(in string, total string) string {
+	desiredLength := len(total)
+	return fmt.Sprintf("%0*s", desiredLength, in)
 }
