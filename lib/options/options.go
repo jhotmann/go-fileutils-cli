@@ -16,6 +16,7 @@ var (
 	NoMove            = false
 	NoExt             = false
 	NoMkdir           = false
+	Soft              = false
 	AllowedSortValues = []string{"none", "alphabet", "reverse-alphabet", "date", "reverse-date", "size", "reverse-size"}
 )
 
@@ -33,6 +34,11 @@ type CommonOptions struct {
 type MoveOptions struct {
 	CommonOptions
 	NoMove bool
+}
+
+type LinkOptions struct {
+	CommonOptions
+	Soft bool
 }
 
 func GetCommonOptions(cmd *cobra.Command) CommonOptions {
@@ -53,6 +59,14 @@ func GetMoveOptions(cmd *cobra.Command) MoveOptions {
 	var opts = MoveOptions{
 		CommonOptions: GetCommonOptions(cmd),
 		NoMove:        util.GetBoolFlag(cmd, "no-move", NoMove),
+	}
+	return opts
+}
+
+func GetLinkOptions(cmd *cobra.Command) LinkOptions {
+	var opts = LinkOptions{
+		CommonOptions: GetCommonOptions(cmd),
+		Soft:          util.GetBoolFlag(cmd, "soft", Soft),
 	}
 	return opts
 }
