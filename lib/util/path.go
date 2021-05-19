@@ -22,11 +22,7 @@ func GetPathObj(f string) PathObject {
 		fmt.Println("Error creating Path Object")
 		return PathObject{}
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		cwd = "/"
-	}
-	relativePath, err := filepath.Rel(cwd, absolutePath)
+	relativePath, err := filepath.Rel(GetWorkingDir(), absolutePath)
 	if err != nil {
 		relativePath = f
 	}
@@ -58,4 +54,12 @@ func (p PathObject) UpdateExt(ext string) PathObject {
 
 func (p PathObject) UpdateDir(dir string) PathObject {
 	return GetPathObj(fmt.Sprintf("%s%c%s%s", dir, os.PathSeparator, p.Name, p.Ext))
+}
+
+func GetWorkingDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "/"
+	}
+	return cwd
 }

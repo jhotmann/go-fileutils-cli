@@ -2,9 +2,19 @@ package util
 
 import (
 	"fmt"
+	"os/user"
 
 	"github.com/spf13/cobra"
 )
+
+func GetUserDir() string {
+	user, err := user.Current()
+	if err != nil {
+		fmt.Println(err.Error())
+		return ""
+	}
+	return user.HomeDir
+}
 
 func GetBoolFlag(cmd *cobra.Command, name string, defaultValue bool) bool {
 	ret, err := cmd.Flags().GetBool(name)

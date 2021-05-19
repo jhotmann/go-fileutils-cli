@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/flosch/pongo2/v4"
 	"github.com/jhotmann/go-fileutils-cli/lib/operation"
 	"github.com/jhotmann/go-fileutils-cli/lib/options"
@@ -19,7 +22,8 @@ var mvCmd = &cobra.Command{
 		// output is the last non-flag argument
 		outputTemplate, err := pongo2.FromString(args[len(args)-1])
 		if err != nil {
-			panic(err)
+			fmt.Println("Invalid Output: ", err.Error())
+			os.Exit(1)
 		}
 		// all other non-flag arguments are input files
 		inputFiles := args[0 : len(args)-1]
@@ -31,6 +35,10 @@ var mvCmd = &cobra.Command{
 		}
 		// create a list of operations for all input files
 		operations := operation.FilesToOperationsList("move", inputFiles, outputTemplate)
+		if len(operations) == 0 {
+			fmt.Println("Error: no operations can be created from the input(s) specified")
+			os.Exit(1)
+		}
 		// filter out directories if --ignore-directories option passed
 		if opts.IgnoreDirectories {
 			operations = operations.RemoveDirectories()
@@ -49,7 +57,7 @@ var mvCmd = &cobra.Command{
 		if !opts.NoIndex { // auto-index conflicting outputs
 			operations = operations.AddIndex()
 		}
-		operations.Run(opts.CommonOptions)
+		operations.Run(os.Args[1:], opts.CommonOptions)
 	},
 }
 

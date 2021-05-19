@@ -11,6 +11,7 @@ import (
 
 	"github.com/1set/gut/yos"
 	"github.com/flosch/pongo2/v4"
+	"github.com/jhotmann/go-fileutils-cli/lib/db"
 	_ "github.com/jhotmann/go-fileutils-cli/lib/filters"
 	"github.com/jhotmann/go-fileutils-cli/lib/options"
 	"github.com/jhotmann/go-fileutils-cli/lib/util"
@@ -36,6 +37,9 @@ func FilesToOperationsList(opType string, files []string, outputTemplate *pongo2
 		matches, err := filepath.Glob(f)
 		if err != nil {
 			panic(err)
+		}
+		if len(matches) == 0 {
+			fmt.Println("Warning:", f, "does not match any existing files")
 		}
 		for _, match := range matches {
 			var op Operation
@@ -193,7 +197,12 @@ func (o OperationList) AddIndex() OperationList {
 	return ret
 }
 
-func (o OperationList) Run(opts options.CommonOptions) {
+func (o OperationList) Run(command []string, opts options.CommonOptions) {
+	var batch db.Batch
+	if !opts.Simulate {
+		batch = db.NewBatch(o[0].Type, command, util.GetWorkingDir())
+	}
+	defer batch.Close()
 	for _, op := range o {
 		var err error
 		if opts.Simulate {
@@ -251,8 +260,10 @@ func (o OperationList) Run(opts options.CommonOptions) {
 			}
 		}
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Error: ", err.Error())
+			continue
 		}
+		db.WriteOperation(batch.Id, op.Input.Abs, op.Output.Abs)
 		if opts.Verbose {
 			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
 		}
