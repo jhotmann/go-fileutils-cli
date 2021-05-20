@@ -16,6 +16,7 @@ import (
 	"github.com/jhotmann/go-fileutils-cli/lib/options"
 	"github.com/jhotmann/go-fileutils-cli/lib/util"
 	"github.com/manifoldco/promptui"
+	"github.com/pterm/pterm"
 )
 
 type Operation struct {
@@ -39,7 +40,7 @@ func FilesToOperationsList(opType string, files []string, outputTemplate *pongo2
 			panic(err)
 		}
 		if len(matches) == 0 {
-			fmt.Println("Warning:", f, "does not match any existing files")
+			pterm.Warning.Printfln("%s does not match any existing files", f)
 		}
 		for _, match := range matches {
 			var op Operation
@@ -48,7 +49,7 @@ func FilesToOperationsList(opType string, files []string, outputTemplate *pongo2
 			op.OutputTemplate = outputTemplate
 			stats, err := os.Stat(match)
 			if err != nil {
-				fmt.Println(err)
+				pterm.Warning.Println(err.Error())
 				continue
 			}
 			op.Stats = stats
@@ -206,12 +207,12 @@ func (o OperationList) Run(command []string, opts options.CommonOptions) {
 	for _, op := range o {
 		var err error
 		if opts.Simulate {
-			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
+			pterm.Info.Printfln("%s → %s", op.Input.Rel, op.Output.Rel)
 			continue
 		}
 		if op.Input.Abs == op.Output.Abs { // no change
 			if opts.Verbose {
-				fmt.Println("Skipping " + op.Input.Rel + " because it did not change")
+				pterm.Info.Printfln("Skipping %s because it did not change", op.Input.Rel)
 			}
 			continue
 		}
@@ -233,7 +234,7 @@ func (o OperationList) Run(command []string, opts options.CommonOptions) {
 					op.runOperation()
 				} else { // Prompt for user input
 					fmt.Println()
-					fmt.Println("What should happen to " + op.Input.Rel + ", " + op.Output.Rel + " already exists")
+					pterm.Warning.Printfln("What should happen to %s, %s already exists", op.Input.Rel, op.Output.Rel)
 					prompt := promptui.Select{
 						Label: "What would you like to do?",
 						Items: []string{"Overwrite", "Input a new name", "Skip"},
@@ -242,6 +243,7 @@ func (o OperationList) Run(command []string, opts options.CommonOptions) {
 					switch index {
 					case 0:
 						op.runOperation()
+						break
 					case 1:
 						prompt2 := promptui.Prompt{
 							Label:   "New File Name",
@@ -253,19 +255,23 @@ func (o OperationList) Run(command []string, opts options.CommonOptions) {
 						}
 						op.Output = op.Output.UpdateName(val)
 						op.runOperation()
+						break
 					case 2:
+						if opts.Verbose {
+							pterm.Info.Printfln("Skipping %s", op.Input.Rel)
+						}
 						continue
 					}
 				}
 			}
 		}
 		if err != nil {
-			fmt.Println("Error: ", err.Error())
+			pterm.Error.Println(err.Error())
 			continue
 		}
 		db.WriteOperation(batch.Id, op.Input.Abs, op.Output.Abs)
 		if opts.Verbose {
-			fmt.Printf("%s → %s\n", op.Input.Rel, op.Output.Rel)
+			pterm.Success.Printfln("%s → %s", op.Input.Rel, op.Output.Rel)
 		}
 	}
 }
