@@ -3,6 +3,7 @@ package db
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -27,6 +28,7 @@ func init() {
 		home = "/"
 	}
 	dbPath = home + "/.fileutils/fu.db"
+	ensureFileutilsDir()
 }
 
 type Batch struct {
@@ -61,9 +63,8 @@ type Operation struct {
 type OperationList []Operation
 
 func NewBatch(commandType string, command []string, workingDir string) Batch {
-	ensureFileutilsDir()
 	var err error
-	db, err = bolt.Open(dbPath, 0755, nil)
+	db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
 	if err != nil {
 		panic(err)
 	}
@@ -88,6 +89,7 @@ func NewBatch(commandType string, command []string, workingDir string) Batch {
 		return b.Put(itob(batch.Id), buff)
 	})
 	if err != nil {
+		db.Close()
 		panic(err)
 	}
 	return batch
@@ -97,7 +99,7 @@ func GetBatches() (BatchList, error) {
 	var err error
 	var batches BatchList
 	if db == nil {
-		db, err = bolt.Open(dbPath, 0755, nil)
+		db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
 		if err != nil {
 			db.Close()
 			panic(err)
@@ -123,7 +125,7 @@ func GetOperationsForBatch(batchId int) (OperationList, error) {
 	var err error
 	var operations []Operation
 	if db == nil {
-		db, err = bolt.Open(dbPath, 0755, nil)
+		db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
 		if err != nil {
 			db.Close()
 			panic(err)
@@ -177,11 +179,18 @@ func (b Batch) Close() {
 	db.Close()
 }
 
+func (b BatchList) Close() {
+	if db == nil {
+		return
+	}
+	db.Close()
+}
+
 func (b BatchList) ToTableData() pterm.TableData {
 	ret := [][]string{}
 	ret = append(ret, []string{"ID", "Date", "Type", "Undone"})
 	for _, batch := range b {
-		data := []string{fmt.Sprintf("%d", batch.Id), batch.Date.Format("Jan 2, 06 3:04:05"), batch.CommandType, fmt.Sprintf("%t", batch.Undone)}
+		data := []string{fmt.Sprintf("%d", batch.Id), batch.Date.Format("Jan 2, 2006 15:04:05"), batch.CommandType, fmt.Sprintf("%t", batch.Undone)}
 		ret = append(ret, data)
 	}
 	return ret
@@ -194,8 +203,8 @@ func (b BatchList) GetPage(page int, batchesPerPage int) (batchList BatchList, p
 	max := batchesPerPage * page
 	min := max - batchesPerPage
 	last := len(b) - 1
-	if max >= last {
-		max = last
+	if max > last {
+		max = last + 1
 		pageAfter = false
 	}
 	return b[min:max], pageBefore, pageAfter
@@ -208,6 +217,64 @@ func (ops OperationList) ToTableData(cwd string) pterm.TableData {
 		ret = append(ret, []string{fmt.Sprintf("%d", op.Id), strings.Replace(op.Input, cwd, "", 1), strings.Replace(op.Output, cwd, "", 1), fmt.Sprintf("%t", op.Undone)})
 	}
 	return ret
+}
+
+func (ops OperationList) Undo(commandType string, cwd string) error {
+	var err error
+	return db.Batch(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("operations"))
+		for _, op := range ops {
+			input := strings.Replace(op.Input, cwd, "", 1)
+			output := strings.Replace(op.Output, cwd, "", 1)
+			if op.Undone {
+				pterm.Info.Printfln("%s already undone", output)
+				continue
+			}
+			if commandType == "move" {
+				err = os.Rename(op.Output, op.Input)
+				if err != nil {
+					pterm.Warning.Printfln("Could not move %s back to %s", output, input)
+					return err
+				}
+				pterm.Success.Printfln("%s → %s", output, input)
+			} else {
+				err = os.RemoveAll(op.Output)
+				if err != nil {
+					pterm.Warning.Printfln("Could not delete %s", op.Output)
+					return err
+				}
+				pterm.Success.Printfln("Deleted %s", output)
+			}
+			op.Undone = true
+			buff, _ := json.Marshal(op)
+			err = b.Put(itob(op.Id), buff)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (batch Batch) Undo() error {
+	if batch.Undone {
+		pterm.Warning.Println("Batch already undone")
+		return errors.New("Batch already undone")
+	}
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("batches"))
+		batch.Undone = true
+		buff, _ := json.Marshal(batch)
+		return b.Put(itob(batch.Id), buff)
+	})
+	if err != nil {
+		return err
+	}
+	operations, err := GetOperationsForBatch(batch.Id)
+	if err != nil {
+		return err
+	}
+	return operations.Undo(batch.CommandType, batch.WorkingDir)
 }
 
 func itob(v int) []byte {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -21,14 +22,18 @@ var (
 	err     error
 )
 
-func init() {
+func getBatches() {
 	batches, err = db.GetBatches()
 	if err != nil {
+		batches.Close()
 		panic(err)
 	}
 }
 
 func PrintHistory(page int, countPerPage int, oldestFirst bool) {
+	if batches == nil {
+		getBatches()
+	}
 	util.ClearTerm()
 	pterm.DefaultBigText.WithLetters(
 		pterm.NewLettersFromStringWithStyle("File", pterm.NewStyle(pterm.FgLightBlue)),
@@ -76,6 +81,7 @@ func PrintHistory(page int, countPerPage int, oldestFirst bool) {
 	}
 	result, err := prompt.Run()
 	if err != nil {
+		batches.Close()
 		os.Exit(0)
 	}
 	if result == "n" {
@@ -94,8 +100,12 @@ func PrintHistory(page int, countPerPage int, oldestFirst bool) {
 }
 
 func PrintBatch(batch db.Batch, returnPage int, countPerPage int) {
+	if batches == nil {
+		getBatches()
+	}
 	operations, err := db.GetOperationsForBatch(batch.Id)
 	if err != nil {
+		batches.Close()
 		panic(err)
 	}
 	util.ClearTerm()
@@ -122,28 +132,43 @@ func PrintBatch(batch db.Batch, returnPage int, countPerPage int) {
 	}
 	result, err := prompt.Run()
 	if err != nil {
+		batches.Close()
 		os.Exit(0)
 	}
 	switch strings.ToLower(result) {
-	case "r":
-		// Rerun command
+	case "r": // re-run
+		batch.Close()
+		cmd := exec.Cmd{
+			Path:   os.Args[0],
+			Args:   append([]string{os.Args[0]}, batch.Command...),
+			Dir:    batch.WorkingDir,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		}
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		break
-	case "c":
+	case "c": // copy
 		clipboard.WriteAll("fu " + batch.CommandString)
+		batch.Close()
 		break
-	case "u":
-		// Undo all operations
+	case "u": // undo
+		batch.Undo()
+		batch.Close()
 		break
-	case "f":
-		// Add to favorites
+	case "f": // favorite
+		// Add to favorites TODO
+		batch.Close()
 		break
-	case "b":
+	case "b": // back
 		PrintHistory(returnPage, countPerPage, true)
 		break
-	default:
+	default: // undo selected operations
 		subset, _ := matchOperationsById(operations, result)
-		// Undo selected operations
-		fmt.Println(len(subset))
+		subset.Undo(batch.CommandType, batch.WorkingDir)
+		batch.Close()
 	}
 }
 
