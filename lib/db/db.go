@@ -9,14 +9,25 @@ import (
 	"time"
 
 	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
 )
 
 var (
 	db     *bolt.DB
-	dbPath string = util.GetUserDir() + "/.fileutils/fu.db"
+	home   string
+	err    error
+	dbPath string
 )
+
+func init() {
+	home, err = homedir.Dir()
+	if err != nil {
+		home = "/"
+	}
+	dbPath = home + "/.fileutils/fu.db"
+}
 
 type Batch struct {
 	Id            int       `json:"Id"`
@@ -30,6 +41,14 @@ type Batch struct {
 }
 
 type BatchList []Batch
+
+func (b BatchList) Reverse() BatchList {
+	ret := BatchList{}
+	for _, batch := range b {
+		ret = append([]Batch{batch}, ret...)
+	}
+	return ret
+}
 
 type Operation struct {
 	Id      int    `json:"Id"`
@@ -198,5 +217,5 @@ func itob(v int) []byte {
 }
 
 func ensureFileutilsDir() {
-	os.MkdirAll(util.GetUserDir()+"/.fileutils", 0755)
+	os.MkdirAll(home+"/.fileutils", 0755)
 }

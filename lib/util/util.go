@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"runtime"
 
 	"github.com/spf13/cobra"
@@ -27,19 +26,10 @@ func init() {
 		fmt.Println("\033[H\033[2J")
 	}
 	clear["windows"] = func() {
-		cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
+		cmd := exec.Command("cmd", "/c", "cls")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
-}
-
-func GetUserDir() string {
-	user, err := user.Current()
-	if err != nil {
-		fmt.Println(err.Error())
-		return ""
-	}
-	return user.HomeDir
 }
 
 func GetBoolFlag(cmd *cobra.Command, name string, defaultValue bool) bool {
@@ -64,9 +54,32 @@ func GetStringFlag(cmd *cobra.Command, name string, allowedValues []string, defa
 	return defaultValue
 }
 
+func GetIntFlag(cmd *cobra.Command, name string, allowedValues []int, defaultValue int) int {
+	ret, err := cmd.Flags().GetInt(name)
+	if err != nil {
+		return defaultValue
+	}
+	if allowedValues == nil {
+		return ret
+	}
+	if IndexOfInt(ret, allowedValues) > -1 {
+		return ret
+	}
+	return defaultValue
+}
+
 func IndexOf(word string, data []string) int {
 	for k, v := range data {
 		if word == v {
+			return k
+		}
+	}
+	return -1
+}
+
+func IndexOfInt(num int, data []int) int {
+	for k, v := range data {
+		if num == v {
 			return k
 		}
 	}
@@ -84,10 +97,10 @@ func ZeroPadString(in string, total string) string {
 }
 
 func ClearTerm() {
-	value, ok := clear[runtime.GOOS] //runtime.GOOS -> linux, windows, darwin etc.
-	if ok {                          //if we defined a clear func for that platform:
-		value() //we execute it
-	} else { //unsupported platform
+	value, ok := clear[runtime.GOOS]
+	if ok {
+		value()
+	} else {
 		panic("Your platform is unsupported! I can't clear terminal screen :(")
 	}
 }

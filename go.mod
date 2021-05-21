@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/1set/gut v0.0.0-20201117175203-a82363231997 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
 	github.com/flosch/pongo2/v4 v4.0.2 // indirect
