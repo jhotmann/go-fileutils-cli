@@ -31,6 +31,17 @@ func init() {
 	ensureFileutilsDir()
 }
 
+func OpenDB() *bolt.DB {
+	if db == nil {
+		db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
+		if err != nil {
+			db.Close()
+			panic(err)
+		}
+	}
+	return db
+}
+
 type Batch struct {
 	Id            int       `json:"Id"`
 	CommandType   string    `json:"CommandType"`
@@ -98,13 +109,7 @@ func NewBatch(commandType string, command []string, workingDir string) Batch {
 func GetBatches() (BatchList, error) {
 	var err error
 	var batches BatchList
-	if db == nil {
-		db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
-		if err != nil {
-			db.Close()
-			panic(err)
-		}
-	}
+	OpenDB()
 	err = db.View(func(tx *bolt.Tx) error {
 		tx.CreateBucketIfNotExists([]byte("batches"))
 		b := tx.Bucket([]byte("batches"))
@@ -121,16 +126,29 @@ func GetBatches() (BatchList, error) {
 	return batches, err
 }
 
+func GetLastNonUndone() (Batch, error) {
+	var err error
+	var batch Batch
+	OpenDB()
+	err = db.View(func(tx *bolt.Tx) error {
+		tx.CreateBucketIfNotExists([]byte("batches"))
+		b := tx.Bucket([]byte("batches"))
+		c := b.Cursor()
+		for k, v := c.Last(); k != nil; k, v = c.Prev() {
+			err = json.Unmarshal(v, &batch)
+			if err == nil && !batch.Undone && batch.Undoable {
+				return nil
+			}
+		}
+		return errors.New("No undoable batches found")
+	})
+	return batch, err
+}
+
 func GetOperationsForBatch(batchId int) (OperationList, error) {
 	var err error
 	var operations []Operation
-	if db == nil {
-		db, err = bolt.Open(dbPath, 0755, &bolt.Options{Timeout: 2 * time.Second})
-		if err != nil {
-			db.Close()
-			panic(err)
-		}
-	}
+	OpenDB()
 	db.View(func(tx *bolt.Tx) error {
 		tx.CreateBucketIfNotExists([]byte("operations"))
 		b := tx.Bucket([]byte("operations"))
