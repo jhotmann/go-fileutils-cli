@@ -104,3 +104,14 @@ func ClearTerm() {
 		panic("Your platform is unsupported! I can't clear terminal screen :(")
 	}
 }
+
+func RunCommand(args []string, cwd string) error {
+	cmd := exec.Cmd{
+		Path:   os.Args[0],
+		Args:   append([]string{os.Args[0]}, args...),
+		Dir:    cwd,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	return cmd.Run()
+}
