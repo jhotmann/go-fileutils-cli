@@ -1,4 +1,4 @@
-package filters
+package operation
 
 import (
 	"errors"
@@ -11,22 +11,6 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jhotmann/go-fileutils-cli/util"
 )
-
-func Init() {
-	pongo2.ReplaceFilter("date", DateFilter)
-	pongo2.ReplaceFilter("time", DateFilter)
-	pongo2.ReplaceFilter("title", titleFilter)
-	pongo2.RegisterFilter("pascal", titleFilter)
-	pongo2.RegisterFilter("snake", snakeFilter)
-	pongo2.RegisterFilter("camel", camelFilter)
-	pongo2.RegisterFilter("kebab", kebabFilter)
-	pongo2.RegisterFilter("replace", replaceFilter)
-	pongo2.RegisterFilter("regexReplace", regexReplaceFilter)
-	pongo2.RegisterFilter("with", withFilter)
-	pongo2.RegisterFilter("match", matchFilter)
-	pongo2.RegisterFilter("index", indexFilter)
-	pongo2.RegisterFilter("pad", padFilter)
-}
 
 func titleFilter(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	if !in.IsString() {
@@ -64,8 +48,13 @@ func DateFilter(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.E
 			OrigError: errors.New("filter input argument must be of type 'time.Time'"),
 		}
 	}
-	//fmt.Println(unicodeToGoDateFormat(param.String()))
-	return pongo2.AsValue(t.Format(unicodeToGoDateFormat(param.String()))), nil
+	var dateFormat string
+	if param.String() == "" {
+		dateFormat = "20060102"
+	} else {
+		dateFormat = param.String()
+	}
+	return pongo2.AsValue(t.Format(unicodeToGoDateFormat(dateFormat))), nil
 }
 
 func unicodeToGoDateFormat(s string) string {

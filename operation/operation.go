@@ -11,14 +11,25 @@ import (
 	"github.com/1set/gut/yos"
 	"github.com/flosch/pongo2/v4"
 	"github.com/jhotmann/go-fileutils-cli/db"
-	"github.com/jhotmann/go-fileutils-cli/lib/filters"
 	"github.com/jhotmann/go-fileutils-cli/util"
 	"github.com/manifoldco/promptui"
 	"github.com/pterm/pterm"
 )
 
 func init() {
-	filters.Init()
+	pongo2.ReplaceFilter("date", DateFilter)
+	pongo2.ReplaceFilter("time", DateFilter)
+	pongo2.ReplaceFilter("title", titleFilter)
+	pongo2.RegisterFilter("pascal", titleFilter)
+	pongo2.RegisterFilter("snake", snakeFilter)
+	pongo2.RegisterFilter("camel", camelFilter)
+	pongo2.RegisterFilter("kebab", kebabFilter)
+	pongo2.RegisterFilter("replace", replaceFilter)
+	pongo2.RegisterFilter("regexReplace", regexReplaceFilter)
+	pongo2.RegisterFilter("with", withFilter)
+	pongo2.RegisterFilter("match", matchFilter)
+	pongo2.RegisterFilter("index", indexFilter)
+	pongo2.RegisterFilter("pad", padFilter)
 }
 
 type Operation struct {
@@ -153,8 +164,8 @@ func (opl OperationList) Run(command []string) {
 						if err != nil {
 							panic(err)
 						}
-						opl[i].Output.UpdateName(val)
-						op.runOperation()
+						opl[i].Output = opl[i].Output.UpdateName(val)
+						opl[i].runOperation()
 						break
 					case 2:
 						if op.Options.Verbose {

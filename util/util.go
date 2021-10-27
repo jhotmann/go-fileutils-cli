@@ -13,9 +13,6 @@ func init() {
 	clear = make(map[string]func()) //Initialize it
 	clear["linux"] = func() {
 		fmt.Println("\033[H\033[2J")
-		// cmd := exec.Command("clear") //Linux example, its tested
-		// cmd.Stdout = os.Stdout
-		// cmd.Run()
 	}
 	clear["darwin"] = func() {
 		fmt.Println("\033[H\033[2J")

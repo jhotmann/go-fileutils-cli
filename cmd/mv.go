@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/flosch/pongo2/v4"
+	"github.com/jhotmann/go-fileutils-cli/operation"
 
 	"github.com/spf13/cobra"
 )
@@ -25,37 +26,25 @@ var mvCmd = &cobra.Command{
 		}
 		// all other non-flag arguments are input files
 		inputFiles := args[0 : len(args)-1]
-		// parse options into our own struct
-		//opts := options.GetMoveOptions(cmd)
-		// if rename alias used, set --no-move automatically
-		if cmd.CalledAs() == "rename" {
-			//opts.NoMove = true
+		var noMove bool
+		if cmd.CalledAs() == "rename" { // if rename alias used, automatically use --no-move
+			noMove = true
+		} else {
+			noMove = getBoolFlag(cmd, "no-move", defaultOptions.NoMove)
 		}
-		// create a list of operations for all input files
-		operations := FilesToOperationsList("move", inputFiles, outputTemplate)
-		if len(operations) == 0 {
-			fmt.Println("Error: no operations can be created from the input(s) specified")
-			os.Exit(1)
-		}
-		// filter out directories if --ignore-directories option passed
-		// if opts.IgnoreDirectories {
-		// 	operations = operations.RemoveDirectories()
-		// }
-		// // filter out repeat inputs (only applies to moves), sort, and convert output from template to string to PathObj
-		// operations = operations.RemoveDuplicateInputs().Sort(opts.Sort).RenderTemplates()
-		// if !opts.NoExt {
-		// 	operations = operations.PopulateBlankExtensions()
-		// }
-		// if opts.NoMove { // keep output directory same as input
-		// 	operations = operations.NoMove()
-		// }
-		// if !opts.Force { // don't care about conflicts
-		// 	operations = operations.FindConflicts()
-		// }
-		// if !opts.NoIndex { // auto-index conflicting outputs
-		// 	operations = operations.AddIndex()
-		// }
-		// operations.Run(os.Args[1:], opts.CommonOptions)
+		// run it
+		FilesToOperationsList(operation.OperationType.Mv, inputFiles, outputTemplate).
+			WithForce(getBoolFlag(cmd, "force", defaultOptions.Force)).
+			WithSimulate(getBoolFlag(cmd, "simulate", defaultOptions.Simulate)).
+			WithVerbose(getBoolFlag(cmd, "verbose", defaultOptions.Verbose)).
+			WithIgnoreDirectories(getBoolFlag(cmd, "ignore-directories", defaultOptions.Verbose)).
+			WithNoIndex(getBoolFlag(cmd, "no-index", defaultOptions.NoIndex)).
+			WithNoExt(getBoolFlag(cmd, "no-ext", defaultOptions.NoExt)).
+			WithNoMove(noMove).
+			WithNoMkdir(getBoolFlag(cmd, "no-mkdir", defaultOptions.NoMkdir)).
+			WithSort(getStringFlag(cmd, "sort", operation.AllowedSortValues, defaultOptions.Sort)).
+			Initialize().
+			Run(os.Args[1:])
 	},
 }
 
