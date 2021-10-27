@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/jhotmann/go-fileutils-cli/util"
 	"github.com/pterm/pterm"
 	bolt "go.etcd.io/bbolt"
 )

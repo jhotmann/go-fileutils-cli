@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-
-	"github.com/spf13/cobra"
 )
 
 var clear map[string]func()
@@ -30,42 +28,6 @@ func init() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
-}
-
-func GetBoolFlag(cmd *cobra.Command, name string, defaultValue bool) bool {
-	ret, err := cmd.Flags().GetBool(name)
-	if err != nil {
-		return defaultValue
-	}
-	return ret
-}
-
-func GetStringFlag(cmd *cobra.Command, name string, allowedValues []string, defaultValue string) string {
-	ret, err := cmd.Flags().GetString(name)
-	if err != nil {
-		return defaultValue
-	}
-	if allowedValues == nil {
-		return ret
-	}
-	if IndexOf(ret, allowedValues) > -1 {
-		return ret
-	}
-	return defaultValue
-}
-
-func GetIntFlag(cmd *cobra.Command, name string, allowedValues []int, defaultValue int) int {
-	ret, err := cmd.Flags().GetInt(name)
-	if err != nil {
-		return defaultValue
-	}
-	if allowedValues == nil {
-		return ret
-	}
-	if IndexOfInt(ret, allowedValues) > -1 {
-		return ret
-	}
-	return defaultValue
 }
 
 func IndexOf(word string, data []string) int {
@@ -114,4 +76,12 @@ func RunCommand(args []string, cwd string) error {
 		Stderr: os.Stderr,
 	}
 	return cmd.Run()
+}
+
+func GetWorkingDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "/"
+	}
+	return cwd
 }

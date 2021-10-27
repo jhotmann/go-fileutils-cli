@@ -1,4 +1,4 @@
-package util
+package operation
 
 import (
 	"fmt"
@@ -45,15 +45,18 @@ func GetPathObj(f string) PathObject {
 }
 
 func (p PathObject) UpdateName(name string) PathObject {
-	return GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, name, p.Ext))
+	p = GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, name, p.Ext))
+	return p
 }
 
 func (p PathObject) UpdateExt(ext string) PathObject {
-	return GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, p.Name, ext))
+	p = GetPathObj(fmt.Sprintf("%s%c%s%s", p.Dir, os.PathSeparator, p.Name, ext))
+	return p
 }
 
 func (p PathObject) UpdateDir(dir string) PathObject {
-	return GetPathObj(fmt.Sprintf("%s%c%s%s", dir, os.PathSeparator, p.Name, p.Ext))
+	p = GetPathObj(fmt.Sprintf("%s%c%s%s", dir, os.PathSeparator, p.Name, p.Ext))
+	return p
 }
 
 func GetWorkingDir() string {

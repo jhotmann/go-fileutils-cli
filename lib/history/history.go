@@ -12,8 +12,8 @@ import (
 	"github.com/dlclark/regexp2"
 	"github.com/manifoldco/promptui"
 
-	"github.com/jhotmann/go-fileutils-cli/lib/db"
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/jhotmann/go-fileutils-cli/db"
+	"github.com/jhotmann/go-fileutils-cli/util"
 	"github.com/pterm/pterm"
 )
 

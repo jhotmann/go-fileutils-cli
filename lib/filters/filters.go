@@ -9,10 +9,10 @@ import (
 	"github.com/dlclark/regexp2"
 	"github.com/flosch/pongo2/v4"
 	"github.com/iancoleman/strcase"
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/jhotmann/go-fileutils-cli/util"
 )
 
-func init() {
+func Init() {
 	pongo2.ReplaceFilter("date", DateFilter)
 	pongo2.ReplaceFilter("time", DateFilter)
 	pongo2.ReplaceFilter("title", titleFilter)

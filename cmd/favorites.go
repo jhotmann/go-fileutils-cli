@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jhotmann/go-fileutils-cli/lib/favorites"
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
 )
 
 var favoriteCmd = &cobra.Command{
@@ -17,8 +16,8 @@ var favoriteCmd = &cobra.Command{
 	Aliases: []string{"f", "fav", "favourite"},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name := strings.ToLower(util.GetStringFlag(cmd, "name", nil, ""))
-		id := util.GetIntFlag(cmd, "id", nil, 5)
+		name := strings.ToLower(getStringFlag(cmd, "name", nil, ""))
+		id := getIntFlag(cmd, "id", nil, 5)
 		if name != "" {
 			err := favorites.RunByName(name)
 			if err != nil {

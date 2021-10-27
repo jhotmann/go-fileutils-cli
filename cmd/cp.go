@@ -5,8 +5,7 @@ import (
 	"os"
 
 	"github.com/flosch/pongo2/v4"
-	"github.com/jhotmann/go-fileutils-cli/lib/operation"
-	"github.com/jhotmann/go-fileutils-cli/lib/options"
+	"github.com/jhotmann/go-fileutils-cli/operation"
 
 	"github.com/spf13/cobra"
 )
@@ -27,38 +26,29 @@ var cpCmd = &cobra.Command{
 		}
 		// all other non-flag arguments are input files
 		inputFiles := args[0 : len(args)-1]
-		// parse options into our own struct
-		opts := options.GetCommonOptions(cmd)
-		// create a list of operations for all input files
-		operations := operation.FilesToOperationsList("copy", inputFiles, outputTemplate)
-		// filter out directories if --ignore-directories option passed
-		if opts.IgnoreDirectories {
-			operations = operations.RemoveDirectories()
-		}
-		// filter out repeat inputs (only applies to moves), sort, and convert output from template to string to PathObj
-		operations = operations.RemoveDuplicateInputs().Sort(opts.Sort).RenderTemplates()
-		if !opts.NoExt {
-			operations = operations.PopulateBlankExtensions()
-		}
-		if !opts.Force { // don't care about conflicts
-			operations = operations.FindConflicts()
-		}
-		if !opts.NoIndex { // auto-index conflicting outputs
-			operations = operations.AddIndex()
-		}
-		operations.Run(os.Args[1:], opts)
+		// run it
+		FilesToOperationsList(operation.OperationType.Cp, inputFiles, outputTemplate).
+			WithForce(getBoolFlag(cmd, "force", defaultOptions.Force)).
+			WithSimulate(getBoolFlag(cmd, "simulate", defaultOptions.Simulate)).
+			WithVerbose(getBoolFlag(cmd, "verbose", defaultOptions.Verbose)).
+			WithIgnoreDirectories(getBoolFlag(cmd, "ignore-directories", defaultOptions.Verbose)).
+			WithNoIndex(getBoolFlag(cmd, "no-index", defaultOptions.NoIndex)).
+			WithNoExt(getBoolFlag(cmd, "no-ext", defaultOptions.NoExt)).
+			WithNoMkdir(getBoolFlag(cmd, "no-mkdir", defaultOptions.NoMkdir)).
+			WithSort(getStringFlag(cmd, "sort", operation.AllowedSortValues, defaultOptions.Sort)).
+			Initialize().
+			Run(os.Args[1:])
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(cpCmd)
-	cpCmd.Flags().BoolP("force", "f", options.Force, "Overwrite conflicts without prompt")
-	cpCmd.Flags().BoolP("simulate", "s", options.Simulate, "Simulate command and print outputs")
-	cpCmd.Flags().String("sort", options.Sort, "Sort files before running operations")
-	cpCmd.Flags().BoolP("verbose", "v", options.Verbose, "Verbose logging")
-	cpCmd.Flags().BoolP("ignore-directories", "d", options.IgnoreDirectories, "Do not move/rename directories")
-	cpCmd.Flags().Bool("no-index", options.NoIndex, "Do not automatically append an index when multiple operations result in the same file name")
-	cpCmd.Flags().Bool("no-move", options.NoMove, "Do not move files to a different directory")
-	cpCmd.Flags().Bool("no-ext", options.NoExt, "Do not automatically append the original file extension if one isn't supplied")
-	cpCmd.Flags().Bool("no-mkdir", options.NoMkdir, "Do not create any missing directories")
+	cpCmd.Flags().BoolP("force", "f", defaultOptions.Force, "Overwrite conflicts without prompt")
+	cpCmd.Flags().BoolP("simulate", "s", defaultOptions.Simulate, "Simulate command and print outputs")
+	cpCmd.Flags().String("sort", defaultOptions.Sort, "Sort files before running operations")
+	cpCmd.Flags().BoolP("verbose", "v", defaultOptions.Verbose, "Verbose logging")
+	cpCmd.Flags().BoolP("ignore-directories", "d", defaultOptions.IgnoreDirectories, "Do not move/rename directories")
+	cpCmd.Flags().Bool("no-index", defaultOptions.NoIndex, "Do not automatically append an index when multiple operations result in the same file name")
+	cpCmd.Flags().Bool("no-ext", defaultOptions.NoExt, "Do not automatically append the original file extension if one isn't supplied")
+	cpCmd.Flags().Bool("no-mkdir", defaultOptions.NoMkdir, "Do not create any missing directories")
 }

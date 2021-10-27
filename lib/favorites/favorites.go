@@ -3,8 +3,8 @@ package favorites
 import (
 	"errors"
 
-	"github.com/jhotmann/go-fileutils-cli/lib/db"
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
+	"github.com/jhotmann/go-fileutils-cli/db"
+	"github.com/jhotmann/go-fileutils-cli/util"
 )
 
 func RunByName(name string) error {

@@ -3,9 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/jhotmann/go-fileutils-cli/lib/db"
+	"github.com/jhotmann/go-fileutils-cli/db"
 	"github.com/jhotmann/go-fileutils-cli/lib/history"
-	"github.com/jhotmann/go-fileutils-cli/lib/util"
 )
 
 var (
@@ -20,8 +19,8 @@ var historyCmd = &cobra.Command{
 	Aliases: []string{"h"},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		oldestFirst := util.GetBoolFlag(cmd, "oldest-first", false)
-		itemsPerPage := util.GetIntFlag(cmd, "items-per-page", nil, 5)
+		oldestFirst := getBoolFlag(cmd, "oldest-first", false)
+		itemsPerPage := getIntFlag(cmd, "items-per-page", nil, 5)
 		history.PrintHistory(1, itemsPerPage, oldestFirst)
 	},
 }
