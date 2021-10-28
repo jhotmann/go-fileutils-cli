@@ -94,7 +94,7 @@ func printHistory(page int, countPerPage int, oldestFirst bool) {
 				}
 			}
 			if !found {
-				return errors.New("Batch ID invalid")
+				return errors.New("batch ID invalid")
 			}
 			return nil
 		},
@@ -129,7 +129,8 @@ func printBatch(batch db.Batch, returnPage int, countPerPage int) {
 		panic(err)
 	}
 	util.ClearTerm()
-	pterm.FgLightBlue.Printfln("Command: fu %s", batch.CommandString)
+	pterm.Println(pterm.FgLightBlue.Sprint("Command: ") + "fu " + batch.CommandString)
+	pterm.Println(pterm.FgLightBlue.Sprint("Working Directory: ") + batch.WorkingDir)
 	pterm.Println()
 	pterm.DefaultTable.WithHasHeader().WithData(operations.ToTableData(batch.WorkingDir)).Render()
 	pterm.Println()
@@ -169,22 +170,17 @@ func printBatch(batch db.Batch, returnPage int, countPerPage int) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		break
 	case "c": // copy
 		clipboard.WriteAll("fu " + batch.CommandString)
 		batch.Close()
-		break
 	case "u": // undo
 		batch.Undo()
 		batch.Close()
-		break
 	case "f": // favorite
 		// Add to favorites TODO
 		batch.Close()
-		break
 	case "b": // back
 		printHistory(returnPage, countPerPage, true)
-		break
 	default: // undo selected operations
 		subset, _ := matchOperationsById(operations, result)
 		subset.Undo(batch.CommandType, batch.WorkingDir)
@@ -202,7 +198,7 @@ func matchOperationsById(operations db.OperationList, ids string) (db.OperationL
 		return ret, err
 	}
 	if !matches {
-		return ret, errors.New("Invalid input")
+		return ret, errors.New("invalid input")
 	} else {
 		allIdsFound := true
 		numbers := strings.Split(ids, ",")
@@ -224,7 +220,7 @@ func matchOperationsById(operations db.OperationList, ids string) (db.OperationL
 			}
 		}
 		if !allIdsFound {
-			err = errors.New("Not all operation IDs valid")
+			err = errors.New("not all operation IDs valid")
 		}
 	}
 	return ret, err

@@ -50,7 +50,7 @@ func NewBatch(commandType string, command []string, workingDir string) Batch {
 		batch.Id = int(id)
 		batch.CommandType = commandType
 		batch.Command = command
-		batch.CommandString = strings.Join(command, " ")
+		batch.CommandString = formatCommandString(command)
 		batch.WorkingDir = workingDir
 		batch.Undoable = util.IndexOf(commandType, []string{"move", "copy", "link-soft", "link-hard"}) > -1
 		batch.Undone = false
@@ -63,6 +63,22 @@ func NewBatch(commandType string, command []string, workingDir string) Batch {
 		panic(err)
 	}
 	return batch
+}
+
+func formatCommandString(command []string) string {
+	ret := ""
+	for i, token := range command {
+		space := ""
+		if i > 0 {
+			space = " "
+		}
+		quotes := ""
+		if strings.ContainsAny(token, " |'?%*+[];&<>!$") {
+			quotes = `"`
+		}
+		ret = fmt.Sprintf("%s%s%s%s%s", ret, space, quotes, token, quotes)
+	}
+	return ret
 }
 
 func GetBatches() (BatchList, error) {

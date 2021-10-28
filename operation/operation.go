@@ -62,44 +62,47 @@ func (opl OperationList) Initialize() OperationList {
 	counts := map[string]int{}
 	for i, op := range opl {
 		if op.Options.IgnoreDirectories && op.Stats.IsDir() { // Ignore directories if specified
-			opl[i].Skip = true
+			op.Skip = true
 		}
-		if util.IndexOf(op.Input.Abs, inputs) == -1 { // Ignore duplicate inputs
+		if util.IndexOf(op.Input.Abs, inputs) == -1 { // If input is unique
 			inputs = append(inputs, op.Input.Abs)
-		} else {
-			opl[i].Skip = true
+		} else { // Ignore duplicate inputs
+			op.Skip = true
 		}
-		if opl[i].Skip {
+		if op.Skip {
+			opl[i] = op
 			continue
 		}
-		opl[i].Output = op.renderTemplate()
-		if !op.Options.NoExt && op.Input.Ext != "" && opl[i].Output.Ext == "" { // Add extension if not specified and not --no-ext used
-			opl[i].Output = opl[i].Output.UpdateExt(op.Input.Ext)
+		op.Output = op.renderTemplate()
+		if !op.Options.NoExt && op.Input.Ext != "" && op.Output.Ext == "" { // Add extension if not specified and not --no-ext used
+			op.Output = op.Output.UpdateExt(op.Input.Ext)
 		}
 		if op.Options.NoMove { // Don't move files if --no-move option used
-			opl[i].Output = opl[i].Output.UpdateDir(op.Input.Dir)
+			op.Output = op.Output.UpdateDir(op.Input.Dir)
 		}
-		count := counts[opl[i].Output.Abs]
-		counts[opl[i].Output.Abs] = count + 1
-		opl[i].Index = count + 1
+		count := counts[op.Output.Abs]
+		counts[op.Output.Abs] = count + 1
+		op.Index = count + 1
 		if count == 0 || op.Options.Force {
-			opl[i].HasConflict = false
+			op.HasConflict = false
 		} else {
-			opl[i].HasConflict = true
+			op.HasConflict = true
 		}
+		opl[i] = op
 	}
 
 	for i, op := range opl { // Loop through a second time to set indexes
-		if !op.Options.NoIndex && op.HasConflict {
+		if !op.Options.NoIndex && (op.HasConflict || counts[op.Output.Abs] > 1) {
 			index := util.ZeroPad(op.Index, counts[op.Output.Abs])
 			if strings.Contains(op.Output.Name, "--FILEINDEXHERE--") { // put index where {{i}} was used
-				opl[i].Output = opl[i].Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", index, -1))
+				op.Output = op.Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", index, -1))
 			} else { // put index at end of file name
-				opl[i].Output = opl[i].Output.UpdateName(op.Output.Name + index)
+				op.Output = op.Output.UpdateName(op.Output.Name + index)
 			}
 		} else { // remove any --FILEINDEXHERE-- if {{i}} was accidentally used
-			opl[i].Output = opl[i].Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", "", -1))
+			op.Output = op.Output.UpdateName(strings.Replace(op.Output.Name, "--FILEINDEXHERE--", "", -1))
 		}
+		opl[i] = op
 	}
 	return opl
 }
@@ -154,7 +157,6 @@ func (opl OperationList) Run(command []string) {
 					switch index {
 					case 0:
 						op.runOperation()
-						break
 					case 1:
 						prompt2 := promptui.Prompt{
 							Label:   "New File Name",
@@ -166,7 +168,6 @@ func (opl OperationList) Run(command []string) {
 						}
 						opl[i].Output = opl[i].Output.UpdateName(val)
 						opl[i].runOperation()
-						break
 					case 2:
 						if op.Options.Verbose {
 							pterm.Info.Printfln("Skipping %s", op.Input.Rel)

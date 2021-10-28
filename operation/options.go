@@ -20,7 +20,7 @@ type OperationOptions struct {
 var DefaultOptions = OperationOptions{
 	Force:             false,
 	Simulate:          false,
-	Sort:              SortType.None,
+	Sort:              SortType.Alphabet,
 	Verbose:           false,
 	IgnoreDirectories: false,
 	NoIndex:           false,

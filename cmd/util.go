@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/jhotmann/go-fileutils-cli/operation"
@@ -13,28 +14,52 @@ import (
 
 func FilesToOperationsList(opType string, files []string, outputTemplate *pongo2.Template) operation.OperationList {
 	operations := operation.OperationList{}
+
+	var fileWg sync.WaitGroup
+	fileWg.Add(len(files))
+
 	for _, f := range files {
-		matches, err := filepath.Glob(f)
-		if err != nil {
-			panic(err)
-		}
-		if len(matches) == 0 {
-			pterm.Warning.Printfln("%s does not match any existing files", f)
-		}
-		for _, match := range matches {
-			var op operation.Operation
-			op.Type = opType
-			op.Input = operation.GetPathObj(match)
-			op.OutputTemplate = outputTemplate
-			stats, err := os.Stat(match)
-			if err == nil {
-				op.Stats = stats
+		go func(f string) {
+			matches, err := filepath.Glob(f)
+			if err != nil {
+				panic(err)
 			}
-			op.Options = operation.DefaultOptions
-			op.Skip = false
-			operations = append(operations, op)
-		}
+			if len(matches) == 0 {
+				pterm.Warning.Printfln("%s does not match any existing files", f)
+			}
+
+			var opsWg sync.WaitGroup
+			operationChannel := make(chan operation.Operation, 10)
+			opsWg.Add(len(matches))
+
+			for _, match := range matches {
+				go func(match string) {
+					var op operation.Operation
+					op.Type = opType
+					op.Input = operation.GetPathObj(match)
+					op.OutputTemplate = outputTemplate
+					stats, err := os.Stat(match)
+					if err == nil {
+						op.Stats = stats
+					}
+					op.Options = operation.DefaultOptions
+					op.Skip = false
+					//operations = append(operations, op)
+					operationChannel <- op
+				}(match)
+			}
+			go func() {
+				for op := range operationChannel {
+					operations = append(operations, op)
+					opsWg.Done()
+				}
+			}()
+			opsWg.Wait()
+			fileWg.Done()
+		}(f)
 	}
+
+	fileWg.Wait()
 	return operations
 }
 
